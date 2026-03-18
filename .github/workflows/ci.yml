@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.github/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Push Docker Image
+    runs-on: self-hosted
+    env:
+      APP_NAME: wrappp
+      DEPLOYMENT_PATH: deployments/wrappp/
+
+    steps:
+      - name: Checkout app repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build & Push to GHCR
+        id: build
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ env.APP_NAME }}
+          IMAGE_TAG=$(git rev-parse --short HEAD)
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+
+          if docker manifest inspect $IMAGE_NAME:$IMAGE_TAG > /dev/null 2>&1; then
+            echo "Image $IMAGE_NAME:$IMAGE_TAG already exists, skipping build"
+          else
+            echo "Building and pushing $IMAGE_NAME:$IMAGE_TAG"
+            docker build --build-arg GO_VERSION=${{ vars.GO_VERSION }} -t $IMAGE_NAME:$IMAGE_TAG .
+            docker push $IMAGE_NAME:$IMAGE_TAG
+          fi
+
+          docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:latest
+
+      - name: Checkout deployment manifests
+        uses: actions/checkout@v4
+        with:
+          repository: gattolab/deployments
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          path: deployment-repo
+
+      - name: Update image tag in manifests
+        run: |
+          IMAGE_TAG=${{ steps.build.outputs.image_tag }}
+          IMAGE_NAME=${{ steps.build.outputs.image_name }}
+
+          find deployment-repo/${{ env.DEPLOYMENT_PATH }} -name "*.yaml" -o -name "*.yml" | \
+            xargs sed -i "s|image:.*${{ env.APP_NAME }}.*|image: $IMAGE_NAME:$IMAGE_TAG|g"
+
+          echo "Updated manifests with image: $IMAGE_NAME:$IMAGE_TAG"
+
+      - name: Commit & push manifest changes
+        run: |
+          cd deployment-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ${{ env.DEPLOYMENT_PATH }}
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: update ${{ env.APP_NAME }} image to ${{ steps.build.outputs.image_tag }}"
+          git push
