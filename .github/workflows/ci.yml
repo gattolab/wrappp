@@ -11,7 +11,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  ci:
+    permissions:
+      contents: write
+      actions: read
+      security-events: write
     uses: gattolab/infra-deployments/.github/workflows/reusable-workflow-ci.yml@main
     with:
       app_name: wrappp
