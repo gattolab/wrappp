@@ -17,7 +17,7 @@ jobs:
       actions: read
       security-events: write
       packages: write
-    uses: gattolab/infra-deployments/.github/workflows/reusable-workflow-ci.yml@d21206910ece64851781bf98c39b1fce7931959a
+    uses: gattolab/ci-workflows/.github/workflows/reusable-workflow-ci.yml@main
     with:
       app_name: wrappp
       deployment_path: manifest/wrappp/
