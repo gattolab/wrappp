@@ -6,7 +6,7 @@ require (
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.30.1
-	github.com/gofiber/fiber/v2 v2.52.12-0.20260206174030-5494de86f38e
+	github.com/gofiber/fiber/v2 v2.52.12
 	github.com/gofiber/jwt/v3 v3.3.10
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/golang-jwt/jwt/v5 v5.3.0
