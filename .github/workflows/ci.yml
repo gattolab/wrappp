@@ -25,5 +25,6 @@ jobs:
       unittest_command: "go test -short  ./internal/usecase/..."
       codeql_language: go
       go_version: ${{ vars.GO_VERSION }}
+      trivy_version: ${{ vars.TRIVY_VERSION }}
     secrets:
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
