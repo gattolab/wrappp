@@ -22,5 +22,7 @@ jobs:
       app_name: wrappp
       deployment_path: manifest/wrappp/
       build_args: --build-arg GO_VERSION=${{ vars.GO_VERSION }}
+      unittest_command: "go test -short  ./internal/usecase/..."
+      codeql_language: go
     secrets:
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
