@@ -38,6 +38,9 @@ type ServerConfig struct {
 type DatabaseConfig struct {
 	Host            string `envconfig:"HOST" default:"localhost"`
 	Port            string `envconfig:"PORT" default:"5432"`
+	ReadHost        string `envconfig:"READ_HOST" default:""`       // replica/read host; falls back to primary Host if empty
+	ReadPort        string `envconfig:"READ_PORT" default:"5433"`   // PgBouncer read port (port 5433 → read replica)
+	Standalone      bool   `envconfig:"STANDALONE" default:"false"` // set true to disable read/write splitting
 	User            string `envconfig:"USER" default:"postgres"`
 	Password        string `envconfig:"PASSWORD" default:""`
 	Database        string `envconfig:"NAME" default:"hotel_reservation"`
