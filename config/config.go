@@ -36,14 +36,15 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host            string `envconfig:"HOST" default:"localhost"`
-	Port            string `envconfig:"PORT" default:"5432"`
-	ReadHost        string `envconfig:"READ_HOST" default:""`       // replica/read host; falls back to primary Host if empty
-	ReadPort        string `envconfig:"READ_PORT" default:"5433"`   // PgBouncer read port (port 5433 → read replica)
-	Standalone      bool   `envconfig:"STANDALONE" default:"false"` // set true to disable read/write splitting
-	User            string `envconfig:"USER" default:"postgres"`
-	Password        string `envconfig:"PASSWORD" default:""`
-	Database        string `envconfig:"NAME" default:"hotel_reservation"`
+	Host     string `envconfig:"HOST" default:"localhost"`
+	Port     string `envconfig:"PORT" default:"6432"`
+	User     string `envconfig:"USER" default:"postgres"`
+	Password string `envconfig:"PASSWORD" default:""`
+	Database string `envconfig:"NAME" default:"wrappp"`
+	// PgBouncer routes read traffic by dbname (e.g. "wrappp_read")
+	// on the same host:port. Leave empty to disable read/write splitting.
+	ReadDatabase    string `envconfig:"READ_NAME" default:""`       // e.g. "wrappp_read"
+	Standalone      bool   `envconfig:"STANDALONE" default:"false"` // set true to force single pool (ignore ReadDatabase)
 	MaxPoolOpen     int    `envconfig:"MAX_POOL_OPEN" default:"50"`
 	MaxPoolIdle     int    `envconfig:"MAX_POOL_IDLE" default:"10"`
 	MaxPollLifeTime int    `envconfig:"MAX_POLL_LIFETIME" default:"300000"`

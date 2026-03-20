@@ -18,6 +18,8 @@ type DB struct {
 	*gorm.DB
 }
 
+// buildDSN builds a postgres DSN string.
+// PgBouncer listens on a single host:port and routes by dbname.
 func buildDSN(host, port, user, password, database string) string {
 	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
 		host, user, password, database, port,
@@ -53,7 +55,7 @@ func NewDB(conf config.DatabaseConfig) (*DB, error) {
 		},
 	)
 
-	// Primary (write) DSN — PgBouncer port 5432 → write pool
+	// Write DSN — same host:port, dbname = "wrappp"
 	writeDSN := buildDSN(conf.Host, conf.Port, conf.User, conf.Password, conf.Database)
 
 	db, err := gorm.Open(driver.Open(writeDSN), &gorm.Config{
@@ -61,7 +63,7 @@ func NewDB(conf config.DatabaseConfig) (*DB, error) {
 	})
 	exception.PanicLogging(err)
 
-	// Configure the primary connection pool
+	// Configure the primary (write) connection pool
 	sqlDB, err := db.DB()
 	exception.PanicLogging(err)
 
@@ -69,23 +71,18 @@ func NewDB(conf config.DatabaseConfig) (*DB, error) {
 	sqlDB.SetMaxIdleConns(maxPoolIdle)
 	sqlDB.SetConnMaxLifetime(time.Duration(maxPollLifeTime) * time.Millisecond)
 
-	if !conf.Standalone {
-		// Read replica DSN — PgBouncer port 5433 → read pool
-		// Falls back to primary host when DATABASE_READ_HOST is not set
-		readHost := conf.ReadHost
-		if readHost == "" {
-			readHost = conf.Host
-		}
-		readDSN := buildDSN(readHost, conf.ReadPort, conf.User, conf.Password, conf.Database)
+	// Enable read/write splitting when:
+	//   - Standalone is false, AND
+	//   - ReadDatabase is set (e.g. "wrappp_read")
+	if !conf.Standalone && conf.ReadDatabase != "" {
+		// Read DSN — same host:port, dbname = "wrappp_read"
+		readDSN := buildDSN(conf.Host, conf.Port, conf.User, conf.Password, conf.ReadDatabase)
 
 		err = db.Use(
 			dbresolver.Register(dbresolver.Config{
-				// Sources: write connections (same as primary)
-				Sources: []gorm.Dialector{driver.Open(writeDSN)},
-				// Replicas: read-only connections
+				Sources:  []gorm.Dialector{driver.Open(writeDSN)},
 				Replicas: []gorm.Dialector{driver.Open(readDSN)},
-				// Random policy across replicas
-				Policy: dbresolver.RandomPolicy{},
+				Policy:   dbresolver.RandomPolicy{},
 			}).
 				SetMaxOpenConns(maxPoolOpen).
 				SetMaxIdleConns(maxPoolIdle).
