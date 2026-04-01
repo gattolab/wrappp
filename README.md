@@ -1,4 +1,4 @@
-# wrappp 🔗
+# Wrappp
 
 > **Live:** [wrappp.link](https://wrappp.link/)  
 > **Frontend repo:** [gattolab/wrappp-web](https://github.com/gattolab/wrappp-web)
