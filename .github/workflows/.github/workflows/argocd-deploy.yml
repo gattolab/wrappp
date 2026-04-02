@@ -1,0 +1,45 @@
+name: ArgoCD Deploy Status
+
+on:
+  repository_dispatch:
+    types: [argocd-deploy]
+
+permissions:
+  deployments: write
+
+jobs:
+  update-deployment-status:
+    name: "Update GitHub Deployment Status"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create deployment and set status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status   = context.payload.client_payload.status;       // "success" | "failure"
+            const env      = context.payload.client_payload.environment;  // "production"
+            const logURL   = context.payload.client_payload.logURL;
+
+            // Create a new GitHub Deployment pointing at the default branch
+            const { data: deployment } = await github.rest.repos.createDeployment({
+              owner:             context.repo.owner,
+              repo:              context.repo.repo,
+              ref:               'main',
+              environment:       env || 'production',
+              auto_merge:        false,
+              required_contexts: [],
+              description:       `Deployed via ArgoCD — ${status}`,
+            });
+
+            // Immediately set the deployment status
+            await github.rest.repos.createDeploymentStatus({
+              owner:           context.repo.owner,
+              repo:            context.repo.repo,
+              deployment_id:   deployment.id,
+              state:           status === 'success' ? 'success' : 'failure',
+              environment:     env || 'production',
+              log_url:         logURL,
+              auto_inactive:   true,
+            });
+
+            core.info(`Deployment #${deployment.id} marked as ${status}`);
